@@ -7,7 +7,7 @@ module Kitchen
     # Command to generate the azure-pipelines.yml file
     class AzurePipelineGenerator < Kitchen::Command::Base
       def call
-        azure_pipelines_erb = AzurePipelineGenerator.render_template
+        azure_pipelines_erb = render_template
         File.open(t.name, 'w+') do |f|
           f.write azure_pipelines_erb
         end
