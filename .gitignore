@@ -1,5 +1,6 @@
 .kitchen.yaml
 .kitchen.yml
+.kitchen
 azure-pipelines.yaml
 azure-pipelines.yml
 kitchen.yaml
