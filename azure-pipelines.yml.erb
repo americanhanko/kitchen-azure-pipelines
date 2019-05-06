@@ -1,0 +1,66 @@
+---
+resources:
+- repo: self
+  clean: true
+
+jobs:
+- job: Unit
+  displayName: Chef Linting and Unit Tests
+  pool:
+    name: ApexInfra Linux
+  steps:
+  - task: chef-software.vsts-chef-tasks.vsts-chef-task-install-chefdk.vsts-chef-task-install-chefdk@1
+    displayName: 'Install ChefDK (Current)'
+    inputs:
+      chefDKForceInstall: true
+
+  - script: 'chef exec cookstyle  --extra-details --no-color'
+    displayName: Run Chef Cookstyle
+    failOnStderr: true
+
+  - script: 'chef exec foodcritic .'
+    displayName: Run Foodcritic
+    failOnStderr: true
+
+  - script: 'chef exec rspec --no-color --format RspecJunitFormatter --out /tmp/rspec.xml'
+    displayName: Run ChefSpec
+    failOnStderr: true
+
+  - task: PublishTestResults@2
+    inputs:
+        testResultsFormat: JUnit
+        testResultsFiles: /tmp/rspec.xml
+
+- job: Integration
+  pool: ApexInfra macOS
+  workspace:
+    clean: all
+  strategy:
+    matrix:
+      <%- AzurePipelineGenerator.kitchen_suites.each do |suite| -%>
+      <%- AzurePipelineGenerator.kitchen_platforms.each do |platform| -%>
+      <%= "#{suite['name']}-#{platform['name']}".gsub(%r{[_,/]}, "-").delete(".") %>:
+        kitchen_instance: <%= "#{suite['name']}-#{platform['name']}".gsub(%r{[_,/]}, "-").delete(".") %>
+      <%- end -%>
+      <%- end -%>
+  steps:
+  - task: chef-software.vsts-chef-tasks.vsts-chef-task-exec-knife.vsts-chef-task-exec-knife@1
+    displayName: Execute Knife
+    inputs:
+      knifeEndpoint: Hephaestus (packer)
+      knifeArguments: download /data_bags --chef-repo-path $(Build.SourcesDirectory) -u {USERNAME} -s {URL}
+      knifePrivateKey: true
+
+  - task: chef-software.vsts-chef-tasks.vsts-chef-task-test-kitchen.vsts-chef-task-test-kitchen@1
+    displayName: 'Execute Test Kitchen: test'
+    inputs:
+      tkAzureEndpoint: Apex Lab - CorpNet
+      tkCommand: test
+      tkPattern: $(kitchen_instance)
+
+  - task: chef-software.vsts-chef-tasks.vsts-chef-task-test-kitchen.vsts-chef-task-test-kitchen@1
+    displayName: 'Execute Test Kitchen: destroy'
+    inputs:
+      tkAzureEndpoint: Apex Lab - CorpNet
+      tkCommand: destroy
+    condition: always()
