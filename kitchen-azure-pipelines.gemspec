@@ -6,6 +6,6 @@ Gem::Specification.new do |s|
   s.description = 'A simple hello world gem'
   s.authors     = ['Eric Hanko']
   s.email       = 'eric.hanko1@gmail.com'
-  s.files       = ['azure-pipelines.yml.erb', 'azure_pipeline_generator.rb']
+  s.files       = `git ls-files`.split($/)
   s.license     = 'MIT'
 end
